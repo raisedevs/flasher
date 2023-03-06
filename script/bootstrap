@@ -1,0 +1,24 @@
+#!/bin/bash
+
+# Fail this script if any commands fail.
+set -e
+
+# Change to project root repository (the one below this one).
+cd "$(dirname "$0")/.."
+
+# Run `brew bundle` on macOS.
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  echo "==> brew bundle check"
+  if ! brew bundle check; then
+    echo "==> brew bundle"
+    brew bundle
+  fi
+fi
+
+# Generate CMake build scripts.
+echo "==> cmake -B build"
+cmake -Werror=dev -Werror=deprecated -B build
+
+# Tell CMake to build the project.
+echo "==> cmake --build build"
+cmake --build build
