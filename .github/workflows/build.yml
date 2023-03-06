@@ -13,5 +13,4 @@ jobs:
         with:
           version: "6"
           cache: true
-      - run: cmake -Werror=dev -Werror=deprecated -B build
-      - run: cmake --build build
+      - run: script/bootstrap
