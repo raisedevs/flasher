@@ -6,18 +6,20 @@ set -e
 # Change to project root repository (the one below this one).
 cd "$(dirname "$0")/.."
 
-# Run `brew bundle` on macOS.
-if [[ "$OSTYPE" == "darwin"* ]]; then
+# Run `brew bundle` on macOS (unless in CI).
+if [[ -z "$CI" && "$OSTYPE" == "darwin"* ]]; then
   echo "==> brew bundle check"
   if ! brew bundle check; then
     echo "==> brew bundle"
     brew bundle
+    echo
   fi
 fi
 
 # Generate CMake build scripts.
 echo "==> cmake -B build"
 cmake -Werror=dev -Werror=deprecated -B build
+echo
 
 # Tell CMake to build the project.
 echo "==> cmake --build build"

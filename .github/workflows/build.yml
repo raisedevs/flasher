@@ -6,11 +6,24 @@ on:
   pull_request:
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.runs-on }}
+    strategy:
+      matrix:
+        include:
+          - name: Linux
+            runs-on: ubuntu-latest
+            run: script/bootstrap
+          - name: macOS
+            runs-on: macos-latest
+            run: script/bootstrap
+          - name: Windows
+            runs-on: windows-latest
+            run: cmake -B build && cmake --build build
     steps:
       - uses: actions/checkout@v3
       - uses: jurplel/install-qt-action@v3
         with:
           version: "6"
           cache: true
-      - run: script/bootstrap
+      - run: ${{ matrix.run }}
