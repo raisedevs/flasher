@@ -74,3 +74,4 @@ CMakeLists.txt.user*
 
 # CMake output
 build/
+build-*/

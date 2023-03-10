@@ -26,4 +26,5 @@ jobs:
         with:
           version: "6"
           cache: true
+          modules: qtserialport
       - run: ${{ matrix.run }}
