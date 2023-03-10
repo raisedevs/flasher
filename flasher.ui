@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>333</width>
-    <height>162</height>
+    <height>424</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -21,7 +21,7 @@
     <item>
      <widget class="QLineEdit" name="usernameEdit">
       <property name="placeholderText">
-       <string>Your raise.dev username</string>
+       <string>Enter your raise.dev username</string>
       </property>
      </widget>
     </item>
@@ -31,14 +31,74 @@
        <enum>QLineEdit::Password</enum>
       </property>
       <property name="placeholderText">
-       <string>Your raise.dev password</string>
+       <string>Enter your raise.dev password</string>
       </property>
      </widget>
     </item>
     <item>
-     <widget class="QPushButton" name="submitButton">
+     <widget class="QPushButton" name="loginButton">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
       <property name="text">
-       <string>Submit</string>
+       <string>Login</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLineEdit" name="firmwareUrlEdit">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="placeholderText">
+       <string>Firmware URL</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="downloadButton">
+      <property name="text">
+       <string>Download</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QComboBox" name="serialPortBox">
+      <property name="placeholderText">
+       <string>Select serial port</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="monitorButton">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="text">
+       <string>Monitor</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="flashButton">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="text">
+       <string>Flash</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPlainTextEdit" name="outputEdit">
+      <property name="frameShadow">
+       <enum>QFrame::Sunken</enum>
+      </property>
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+      <property name="placeholderText">
+       <string>Output</string>
       </property>
      </widget>
     </item>

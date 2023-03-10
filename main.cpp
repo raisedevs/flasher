@@ -1,8 +1,9 @@
 #include "flasher.h"
 
 #include <QApplication>
-#include <QLocale>
 #include <QTranslator>
+#include <QLocale>
+#include <QErrorMessage>
 
 int main(int argc, char *argv[])
 {
@@ -17,6 +18,9 @@ int main(int argc, char *argv[])
             break;
         }
     }
+
+    QErrorMessage::qtHandler();
+
     Flasher flasher;
     flasher.show();
     return application.exec();
