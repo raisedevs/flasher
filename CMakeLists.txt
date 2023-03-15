@@ -54,4 +54,10 @@ install(TARGETS Flasher
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
 
+if(MSVC)
+  target_compile_options(Flasher PRIVATE /W4 /WX)
+else()
+  target_compile_options(Flasher PRIVATE -Wall -Wextra -Werror)
+endif()
+
 qt_finalize_executable(Flasher)

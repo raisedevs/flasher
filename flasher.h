@@ -23,7 +23,6 @@ class Flasher : public QMainWindow
     Q_OBJECT
 
 public:
-    void extracted();
     Flasher(QWidget *parent = nullptr);
     ~Flasher();
 
@@ -33,6 +32,9 @@ private:
     QHash<QString, QSerialPortInfo> serialPortsHash;
     QSerialPort serialPort;
     QProcess process;
+    QString esptoolPath;
+    void setOutput(QString message);
+    void appendOutput(QString message);
 
 private slots:
     void downloadFirmware();
@@ -40,6 +42,7 @@ private slots:
     void firmwareDownloaded(QNetworkReply *reply);
     void monitorSerial();
     void readSerial();
+    void readProcess();
     void serialError(QSerialPort::SerialPortError error);
     void flashSerial();
 };
