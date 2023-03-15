@@ -68,6 +68,27 @@ Flasher::Flasher(QWidget *parent)
             this, &Flasher::monitorSerial);
     connect(ui->flashButton, &QPushButton::clicked,
             this, &Flasher::flashSerial);
+
+    connect(&serialPort, &QIODevice::readyRead,
+            this, &Flasher::readSerial);
+    connect(&process, &QProcess::readyReadStandardOutput,
+            this, &Flasher::readProcess);
+
+    process.setProcessChannelMode(QProcess::MergedChannels);
+
+    // TODO: remove
+    ui->flashButton->setEnabled(true);
+}
+
+void Flasher::setOutput(QString message)
+{
+    ui->outputEdit->clear();
+    ui->outputEdit->appendPlainText(message);
+}
+
+void Flasher::appendOutput(QString message)
+{
+    ui->outputEdit->appendPlainText(message);
 }
 
 void Flasher::downloadFirmware()
@@ -75,8 +96,7 @@ void Flasher::downloadFirmware()
     QUrl firmwareUrl(ui->firmwareUrlEdit->text());
     QNetworkRequest firmwareRequest(firmwareUrl);
 
-    ui->outputEdit->clear();
-    ui->outputEdit->appendPlainText(QString("Downloading %1...").arg(firmwareUrl.toString()));
+    setOutput(QString("Downloading %1...").arg(firmwareUrl.toString()));
 
     QNetworkReply *reply = manager.get(firmwareRequest);
     connect(reply, &QNetworkReply::sslErrors,
@@ -86,16 +106,15 @@ void Flasher::downloadFirmware()
 void Flasher::sslErrors(const QList<QSslError> &sslErrors)
 {
     for (const QSslError &error : sslErrors) {
-        ui->outputEdit->appendPlainText(QString("SSL Error: %1").arg(error.errorString()));
+        appendOutput(QString("SSL Error: %1").arg(error.errorString()));
     }
 }
 
 void Flasher::firmwareDownloaded(QNetworkReply *reply) {
     if (reply->error()) {
-        ui->outputEdit->appendPlainText(QString("Download failed: %1").arg(reply->errorString()));
+        appendOutput(QString("Download failed: %1").arg(reply->errorString()));
     } else {
-        ui->outputEdit->appendPlainText(
-                    QString("Download succeeded: %1 (status code %2) [%3 bytes]").arg(
+        appendOutput(QString("Download succeeded: %1 (status code %2) [%3 bytes]").arg(
                         reply->url().toEncoded().constData(),
                         QString::number(reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt()),
                         QString::number(reply->bytesAvailable())));
@@ -109,12 +128,8 @@ void Flasher::monitorSerial()
     const QString portName = ui->serialPortBox->currentText();
     serialPort.setPort(serialPortsHash[portName]);
 
-    ui->outputEdit->clear();
-    ui->outputEdit->appendPlainText(QString("Monitoring %1...").arg(portName));
-    ui->outputEdit->appendPlainText(QString());
+    setOutput(QString("Monitoring %1...\n").arg(portName));
 
-    connect(&serialPort, &QIODevice::readyRead,
-            this, &Flasher::readSerial);
     connect(&serialPort, &QSerialPort::errorOccurred,
             this, &Flasher::serialError);
 
@@ -131,20 +146,49 @@ void Flasher::readSerial()
     ui->outputEdit->setTextCursor(previousCursor);
 }
 
+void Flasher::readProcess()
+{
+    // Insert text without a newline
+    // TODO: unify above
+    const QTextCursor &previousCursor = ui->outputEdit->textCursor();
+    ui->outputEdit->moveCursor(QTextCursor::End);
+    ui->outputEdit->insertPlainText(process.readAllStandardOutput());
+    ui->outputEdit->setTextCursor(previousCursor);
+}
+
 void Flasher::serialError(QSerialPort::SerialPortError error)
 {
     QSerialPort::SerialPortError portError = serialPort.error();
     if (!error && !portError) {
         return;
     }
-    QString message = QString("Serial Port Error: %1").arg(error);
-    ui->outputEdit->appendPlainText(message);
+    setOutput(QString("Serial Port Error: %1").arg(error));
     serialPort.clearError();
 }
 
 void Flasher::flashSerial()
 {
-    QString esptoolPath = QStandardPaths::findExecutable("esptool.py");
+    QDir cacheDir = QDir(QStandardPaths::writableLocation(QStandardPaths::CacheLocation));
+    QDir dataDir = QDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
+
+    const QString esptoolPy = "esptool.py";
+    if (esptoolPath.isEmpty()) {
+      esptoolPath = QStandardPaths::findExecutable(esptoolPy);
+    }
+    if (esptoolPath.isEmpty()) {
+        const QStringList extraPaths = {
+            dataDir.filePath("pip/bin"),
+            "/opt/homebrew/bin",
+            "/usr/local/bin",
+        };
+        esptoolPath = QStandardPaths::findExecutable(esptoolPy, extraPaths);
+    }
+
+    if (esptoolPath.startsWith(dataDir.filePath("pip"))) {
+        qputenv("PYTHONPATH", dataDir.filePath("pip").toUtf8());
+    }
+
+
     QString pipPath;
     if (esptoolPath.isEmpty()) {
         pipPath = QStandardPaths::findExecutable("pip3");
@@ -152,36 +196,45 @@ void Flasher::flashSerial()
             pipPath = QStandardPaths::findExecutable("pip");
         }
         if (pipPath.isEmpty()) {
-            ui->outputEdit->appendPlainText("Flash Error: could not find esptool.py or pip3 or pip in PATH!");
+            setOutput("Flash Error: could not find esptool.py or pip3 or pip in PATH!");
             return;
         }
     }
 
-    QDir cache = QDir(QStandardPaths::writableLocation(QStandardPaths::CacheLocation));
-    QDir data = QDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
-
-    const bool cache_created = cache.mkpath("pip");
-    if (!cache_created) {
-        ui->outputEdit->appendPlainText(QString("Flash Error: could not create %1/pip").arg(cache.path()));
+    const bool cacheCreated = cacheDir.mkpath("pip");
+    if (!cacheCreated) {
+        setOutput(QString("Flash Error: could not create %1/pip").arg(cacheDir.path()));
         return;
     }
 
-    const bool data_created = data.mkpath("pip");
-    if (!data_created) {
-        ui->outputEdit->appendPlainText(QString("Flash Error: could not create %1/pip").arg(data.path()));
+    const bool dataCreated = dataDir.mkpath("pip");
+    if (!dataCreated) {
+        setOutput(QString("Flash Error: could not create %1/pip").arg(dataDir.path()));
         return;
     }
 
     if (esptoolPath.isEmpty()) {
-// TODO: set PYTHONPATH
-//        process.start(pipPath, {
-//            "--prefer-binary", "--isolated", "--upgrade",
-//            "--target", data.filePath("pip"),
-//            "--cache-dir", cache.filePath("pip"),
-//            "install", "esptool",
-//        });
-//        process.waitForFinished(-1);
+        setOutput("esptool.py not found, installing with pip...\n");
+        process.start(pipPath, {
+            "install",
+            "--prefer-binary", "--isolated", "--upgrade",
+            "--target", dataDir.filePath("pip"),
+            "--cache-dir", cacheDir.filePath("pip"),
+            "esptool",
+        });
+        esptoolPath = dataDir.filePath("pip/bin/esptool.py");
+        connect(&process, &QProcess::finished,
+                this, &Flasher::flashSerial);
+        return;
     }
+
+    disconnect(&process, &QProcess::finished,
+              this, &Flasher::flashSerial);
+
+    appendOutput(QString("Running %1...\n").arg(esptoolPath));
+    process.start(esptoolPath, {
+                "----help",
+            });
 }
 
 Flasher::~Flasher()
