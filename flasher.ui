@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>333</width>
-    <height>424</height>
+    <width>424</width>
+    <height>473</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -20,6 +20,9 @@
    <layout class="QVBoxLayout" name="verticalLayout">
     <item>
      <widget class="QLineEdit" name="usernameEdit">
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
       <property name="placeholderText">
        <string>Enter your raise.dev username</string>
       </property>
@@ -29,6 +32,9 @@
      <widget class="QLineEdit" name="passwordEdit">
       <property name="echoMode">
        <enum>QLineEdit::Password</enum>
+      </property>
+      <property name="readOnly">
+       <bool>true</bool>
       </property>
       <property name="placeholderText">
        <string>Enter your raise.dev password</string>
@@ -70,6 +76,13 @@
      </widget>
     </item>
     <item>
+     <widget class="QPushButton" name="reloadSerialPortsButton">
+      <property name="text">
+       <string>Reload serial ports</string>
+      </property>
+     </widget>
+    </item>
+    <item>
      <widget class="QPushButton" name="monitorButton">
       <property name="enabled">
        <bool>false</bool>
@@ -91,6 +104,12 @@
     </item>
     <item>
      <widget class="QPlainTextEdit" name="outputEdit">
+      <property name="minimumSize">
+       <size>
+        <width>400</width>
+        <height>120</height>
+       </size>
+      </property>
       <property name="frameShadow">
        <enum>QFrame::Sunken</enum>
       </property>
@@ -109,7 +128,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>333</width>
+     <width>424</width>
      <height>24</height>
     </rect>
    </property>
