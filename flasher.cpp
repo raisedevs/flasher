@@ -39,8 +39,65 @@ Flasher::Flasher(QWidget *parent)
 {
     ui->setupUi(this);
 
+    QFont monospaceFont("SF Mono");
+    monospaceFont.setStyleHint(QFont::Monospace);
+    ui->outputEdit->setFont(monospaceFont);
+
     // TODO: use URL from Raise login
     ui->firmwareUrlEdit->setText(firmware_url);
+
+    cacheDir.setPath(QStandardPaths::writableLocation(QStandardPaths::CacheLocation));
+    firmwareFile.setFileName(cacheDir.filePath("firmware/firmware.bin"));
+
+    reloadSerialPorts();
+
+    connect(ui->downloadButton, &QPushButton::clicked,
+            this, &Flasher::downloadFirmware);
+
+    connect(ui->monitorButton, &QPushButton::clicked,
+            this, &Flasher::monitorSerial);
+    connect(ui->flashButton, &QPushButton::clicked,
+            &serialPort, &QSerialPort::close);
+    connect(ui->flashButton, &QPushButton::clicked,
+            this, &Flasher::flashSerial);
+    connect(ui->reloadSerialPortsButton, &QPushButton::clicked,
+            this, &Flasher::reloadSerialPorts);
+
+    connect(&manager, &QNetworkAccessManager::finished,
+            this, &Flasher::firmwareDownloaded);
+    connect(&serialPort, &QIODevice::readyRead,
+            this, &Flasher::readSerial);
+    connect(&process, &QProcess::readyReadStandardOutput,
+            this, &Flasher::readProcess);
+
+    process.setProcessChannelMode(QProcess::MergedChannels);
+}
+
+void Flasher::setOutput(QString message)
+{
+    ui->outputEdit->clear();
+    ui->outputEdit->appendPlainText(message);
+}
+
+void Flasher::appendOutput(QString message)
+{
+    // Insert text without a newline
+    const QTextCursor &previousCursor = ui->outputEdit->textCursor();
+    ui->outputEdit->moveCursor(QTextCursor::End);
+    ui->outputEdit->insertPlainText(message);
+    ui->outputEdit->setTextCursor(previousCursor);
+}
+
+void Flasher::appendOutputLine(QString message)
+{
+    // Insert text with a newline
+    ui->outputEdit->appendPlainText(message);
+}
+
+void Flasher::reloadSerialPorts() {
+    ui->serialPortBox->clear();
+    ui->monitorButton->setEnabled(false);
+    ui->flashButton->setEnabled(false);
 
     for (const QSerialPortInfo &port : QSerialPortInfo::availablePorts()) {
         QString name = port.systemLocation();
@@ -55,44 +112,18 @@ Flasher::Flasher(QWidget *parent)
         if (ui->serialPortBox->currentIndex() < 0) {
             ui->serialPortBox->setCurrentText(name);
             ui->monitorButton->setEnabled(true);
-            ui->flashButton->setEnabled(true);
+            ui->flashButton->setEnabled(firmwareFile.exists());
         }
     }
-
-    connect(ui->downloadButton, &QPushButton::clicked,
-            this, &Flasher::downloadFirmware);
-    connect(&manager, &QNetworkAccessManager::finished,
-            this, &Flasher::firmwareDownloaded);
-
-    connect(ui->monitorButton, &QPushButton::clicked,
-            this, &Flasher::monitorSerial);
-    connect(ui->flashButton, &QPushButton::clicked,
-            this, &Flasher::flashSerial);
-
-    connect(&serialPort, &QIODevice::readyRead,
-            this, &Flasher::readSerial);
-    connect(&process, &QProcess::readyReadStandardOutput,
-            this, &Flasher::readProcess);
-
-    process.setProcessChannelMode(QProcess::MergedChannels);
-
-    // TODO: remove
-    ui->flashButton->setEnabled(true);
-}
-
-void Flasher::setOutput(QString message)
-{
-    ui->outputEdit->clear();
-    ui->outputEdit->appendPlainText(message);
-}
-
-void Flasher::appendOutput(QString message)
-{
-    ui->outputEdit->appendPlainText(message);
 }
 
 void Flasher::downloadFirmware()
 {
+    ui->monitorButton->setEnabled(false);
+    ui->flashButton->setEnabled(false);
+    ui->downloadButton->setEnabled(false);
+    serialPort.close();
+
     QUrl firmwareUrl(ui->firmwareUrlEdit->text());
     QNetworkRequest firmwareRequest(firmwareUrl);
 
@@ -106,20 +137,23 @@ void Flasher::downloadFirmware()
 void Flasher::sslErrors(const QList<QSslError> &sslErrors)
 {
     for (const QSslError &error : sslErrors) {
-        appendOutput(QString("SSL Error: %1").arg(error.errorString()));
+        appendOutputLine(QString("SSL Error: %1").arg(error.errorString()));
     }
 }
 
 void Flasher::firmwareDownloaded(QNetworkReply *reply) {
     if (reply->error()) {
-        appendOutput(QString("Download failed: %1").arg(reply->errorString()));
+        appendOutputLine(QString("Download failed: %1").arg(reply->errorString()));
     } else {
-        appendOutput(QString("Download succeeded: %1 (status code %2) [%3 bytes]").arg(
-                        reply->url().toEncoded().constData(),
-                        QString::number(reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt()),
-                        QString::number(reply->bytesAvailable())));
+        cacheDir.mkpath("firmware");
+        firmwareFile.open(QIODevice::WriteOnly);
+        firmwareFile.write(reply->readAll());
+        firmwareFile.close();
+        appendOutputLine(QString("Downloaded firmware to %1").arg(firmwareFile.fileName()));
+        ui->flashButton->setEnabled(true);
     }
 
+    reloadSerialPorts();
     reply->deleteLater();
 }
 
@@ -139,21 +173,12 @@ void Flasher::monitorSerial()
 
 void Flasher::readSerial()
 {
-    // Insert text without a newline
-    const QTextCursor &previousCursor = ui->outputEdit->textCursor();
-    ui->outputEdit->moveCursor(QTextCursor::End);
-    ui->outputEdit->insertPlainText(serialPort.readAll());
-    ui->outputEdit->setTextCursor(previousCursor);
+    appendOutput(serialPort.readAll());
 }
 
 void Flasher::readProcess()
 {
-    // Insert text without a newline
-    // TODO: unify above
-    const QTextCursor &previousCursor = ui->outputEdit->textCursor();
-    ui->outputEdit->moveCursor(QTextCursor::End);
-    ui->outputEdit->insertPlainText(process.readAllStandardOutput());
-    ui->outputEdit->setTextCursor(previousCursor);
+    appendOutput(process.readAllStandardOutput());
 }
 
 void Flasher::serialError(QSerialPort::SerialPortError error)
@@ -168,7 +193,8 @@ void Flasher::serialError(QSerialPort::SerialPortError error)
 
 void Flasher::flashSerial()
 {
-    QDir cacheDir = QDir(QStandardPaths::writableLocation(QStandardPaths::CacheLocation));
+    ui->monitorButton->setEnabled(false);
+
     QDir dataDir = QDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
 
     const QString esptoolPy = "esptool.py";
@@ -187,7 +213,6 @@ void Flasher::flashSerial()
     if (esptoolPath.startsWith(dataDir.filePath("pip"))) {
         qputenv("PYTHONPATH", dataDir.filePath("pip").toUtf8());
     }
-
 
     QString pipPath;
     if (esptoolPath.isEmpty()) {
@@ -231,10 +256,28 @@ void Flasher::flashSerial()
     disconnect(&process, &QProcess::finished,
               this, &Flasher::flashSerial);
 
-    appendOutput(QString("Running %1...\n").arg(esptoolPath));
-    process.start(esptoolPath, {
-                "----help",
-            });
+    const QStringList args = {
+        "--chip", "esp32",
+        "--port", ui->serialPortBox->currentText(),
+        "write_flash",
+        "0x10000",
+        firmwareFile.fileName(),
+    };
+    appendOutputLine(QString("Running %1 %2...\n").arg(esptoolPath, args.join(" ")));
+    process.start(esptoolPath, args);
+    connect(&process, &QProcess::finished,
+            this, &Flasher::flashFinished);
+}
+
+void Flasher::flashFinished() {
+    ui->monitorButton->setEnabled(true);
+
+    if (process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0) {
+        return;
+    }
+
+    ui->flashButton->setEnabled(false);
+    monitorSerial();
 }
 
 Flasher::~Flasher()

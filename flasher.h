@@ -28,15 +28,20 @@ public:
 
 private:
     Ui::Flasher *ui;
-    QNetworkAccessManager manager;
+    QDir cacheDir;
+    QFile firmwareFile;
     QHash<QString, QSerialPortInfo> serialPortsHash;
+    QNetworkAccessManager manager;
     QSerialPort serialPort;
     QProcess process;
     QString esptoolPath;
+
     void setOutput(QString message);
     void appendOutput(QString message);
+    void appendOutputLine(QString message);
 
 private slots:
+    void reloadSerialPorts();
     void downloadFirmware();
     void sslErrors(const QList<QSslError> &sslErrors);
     void firmwareDownloaded(QNetworkReply *reply);
@@ -45,5 +50,6 @@ private slots:
     void readProcess();
     void serialError(QSerialPort::SerialPortError error);
     void flashSerial();
+    void flashFinished();
 };
 #endif // FLASHER_H
