@@ -2,7 +2,7 @@
 
 Raise's ESP32 firmware flasher cross-platform Qt desktop application.
 
-## Building (on macOS)
+## Building and Developing (on macOS)
 
 We recommend building this by using QtCreator:
 
