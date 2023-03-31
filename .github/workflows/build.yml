@@ -14,12 +14,14 @@ jobs:
           - name: Linux
             runs-on: ubuntu-latest
             run: script/bootstrap
-          - name: macOS
-            runs-on: macos-latest
-            run: script/bootstrap
-          - name: Windows
-            runs-on: windows-latest
-            run: cmake -B build && cmake --build build
+          # Disable macOS and Windows builds until we need them
+          # to save some GitHub Actions minutes.
+          # - name: macOS
+          #   runs-on: macos-latest
+          #   run: script/bootstrap
+          # - name: Windows
+          #   runs-on: windows-latest
+          #   run: cmake -B build && cmake --build build
     steps:
       - uses: actions/checkout@v3
       - uses: jurplel/install-qt-action@v3
