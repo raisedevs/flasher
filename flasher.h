@@ -39,9 +39,13 @@ private:
     void setOutput(QString message);
     void appendOutput(QString message);
     void appendOutputLine(QString message);
+    void setEspToolPath();
 
 private slots:
     void reloadSerialPorts();
+    void updateUrl();
+    void readMacAddress();
+    void readMacAddressFinished();
     void downloadFirmware();
     void sslErrors(const QList<QSslError> &sslErrors);
     void firmwareDownloaded(QNetworkReply *reply);

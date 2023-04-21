@@ -11,63 +11,13 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Flasher</string>
+   <string>Raise.dev Firmware Flasher</string>
   </property>
   <property name="unifiedTitleAndToolBarOnMac">
    <bool>true</bool>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout">
-    <item>
-     <widget class="QLineEdit" name="usernameEdit">
-      <property name="readOnly">
-       <bool>true</bool>
-      </property>
-      <property name="placeholderText">
-       <string>Enter your raise.dev username</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QLineEdit" name="passwordEdit">
-      <property name="echoMode">
-       <enum>QLineEdit::Password</enum>
-      </property>
-      <property name="readOnly">
-       <bool>true</bool>
-      </property>
-      <property name="placeholderText">
-       <string>Enter your raise.dev password</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QPushButton" name="loginButton">
-      <property name="enabled">
-       <bool>false</bool>
-      </property>
-      <property name="text">
-       <string>Login</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QLineEdit" name="firmwareUrlEdit">
-      <property name="enabled">
-       <bool>false</bool>
-      </property>
-      <property name="placeholderText">
-       <string>Firmware URL</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QPushButton" name="downloadButton">
-      <property name="text">
-       <string>Download</string>
-      </property>
-     </widget>
-    </item>
     <item>
      <widget class="QComboBox" name="serialPortBox">
       <property name="placeholderText">
@@ -83,12 +33,59 @@
      </widget>
     </item>
     <item>
+     <widget class="QLineEdit" name="macAddressEdit">
+      <property name="text">
+       <string/>
+      </property>
+      <property name="placeholderText">
+       <string>Enter or Read your Device MAC address</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="readMacAddressButton">
+      <property name="text">
+       <string>Read Device MAC address</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLineEdit" name="accountEdit">
+      <property name="readOnly">
+       <bool>false</bool>
+      </property>
+      <property name="placeholderText">
+       <string>Enter your Raise.dev Console Account</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLineEdit" name="updaterUrlEdit">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="placeholderText">
+       <string>Raise.dev Console Updater URL from Account, MAC Address</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="downloadButton">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="text">
+       <string>Download Firmware Version binary</string>
+      </property>
+     </widget>
+    </item>
+    <item>
      <widget class="QPushButton" name="monitorButton">
       <property name="enabled">
        <bool>false</bool>
       </property>
       <property name="text">
-       <string>Monitor</string>
+       <string>Monitor serial port</string>
       </property>
      </widget>
     </item>
@@ -98,7 +95,7 @@
        <bool>false</bool>
       </property>
       <property name="text">
-       <string>Flash</string>
+       <string>Flash Version to serial port</string>
       </property>
      </widget>
     </item>
@@ -134,7 +131,7 @@
    </property>
    <widget class="QMenu" name="menuPreferences">
     <property name="title">
-     <string>Flasher</string>
+     <string>Raise.dev Firmware Flasher</string>
     </property>
     <addaction name="actionPreferences"/>
    </widget>

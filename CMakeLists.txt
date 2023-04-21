@@ -20,12 +20,17 @@ find_package(Qt6 REQUIRED COMPONENTS
 
 set(TS_FILES Flasher_en_GB.ts)
 
+set(MACOSX_BUNDLE_ICON_FILE raisedev.icns)
+set(APP_ICON_MACOS "${CMAKE_CURRENT_SOURCE_DIR}/raisedev.icns")
+set_source_files_properties(${APP_ICON_MACOS} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
+
 set(PROJECT_SOURCES
     main.cpp
     flasher.cpp
     flasher.h
     flasher.ui
     ${TS_FILES}
+    ${APP_ICON_MACOS}
 )
 
 qt_add_executable(Flasher
