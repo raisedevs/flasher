@@ -2,7 +2,7 @@
 #include "./ui_flasher.h"
 
 const char* FLASHER_USER_AGENT = "Raise-Flasher-Qt";
-const char* DASHBOARD_RAISE_DEV_UPDATER_URL = "https://dashboard.raise.dev/updater";
+const char* RAISE_DEV_CONSOLE_DOMAIN = "https://console.raise.dev";
 
 Flasher::Flasher(QWidget *parent)
     : QMainWindow(parent)
@@ -14,29 +14,40 @@ Flasher::Flasher(QWidget *parent)
     monospaceFont.setStyleHint(QFont::Monospace);
     ui->outputEdit->setFont(monospaceFont);
 
-    ui->firmwareUrlEdit->setText(DASHBOARD_RAISE_DEV_UPDATER_URL);
-
     cacheDir.setPath(QStandardPaths::writableLocation(QStandardPaths::CacheLocation));
     firmwareFile.setFileName(cacheDir.filePath("firmware/firmware.bin"));
 
     reloadSerialPorts();
+
+    connect(ui->reloadSerialPortsButton, &QPushButton::clicked,
+            this, &Flasher::reloadSerialPorts);
+
+    connect(ui->macAddressEdit, &QLineEdit::textEdited,
+            this, &Flasher::updateUrl);
+
+    connect(ui->readMacAddressButton, &QPushButton::clicked,
+            this, &Flasher::readMacAddress);
+
+    connect(ui->accountEdit, &QLineEdit::textEdited,
+            this, &Flasher::updateUrl);
 
     connect(ui->downloadButton, &QPushButton::clicked,
             this, &Flasher::downloadFirmware);
 
     connect(ui->monitorButton, &QPushButton::clicked,
             this, &Flasher::monitorSerial);
+
     connect(ui->flashButton, &QPushButton::clicked,
             &serialPort, &QSerialPort::close);
     connect(ui->flashButton, &QPushButton::clicked,
             this, &Flasher::flashSerial);
-    connect(ui->reloadSerialPortsButton, &QPushButton::clicked,
-            this, &Flasher::reloadSerialPorts);
 
     connect(&manager, &QNetworkAccessManager::finished,
             this, &Flasher::firmwareDownloaded);
+
     connect(&serialPort, &QIODevice::readyRead,
             this, &Flasher::readSerial);
+
     connect(&process, &QProcess::readyReadStandardOutput,
             this, &Flasher::readProcess);
 
@@ -66,6 +77,7 @@ void Flasher::appendOutputLine(QString message)
 
 void Flasher::reloadSerialPorts() {
     ui->serialPortBox->clear();
+    ui->readMacAddressButton->setEnabled(false);
     ui->monitorButton->setEnabled(false);
     ui->flashButton->setEnabled(false);
 
@@ -81,10 +93,134 @@ void Flasher::reloadSerialPorts() {
 
         if (ui->serialPortBox->currentIndex() < 0) {
             ui->serialPortBox->setCurrentText(name);
+            ui->readMacAddressButton->setEnabled(true);
             ui->monitorButton->setEnabled(true);
             ui->flashButton->setEnabled(firmwareFile.exists());
         }
     }
+}
+
+void Flasher::setEspToolPath() {
+    QDir dataDir = QDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
+
+    const QString esptoolPy = "esptool.py";
+    if (esptoolPath.isEmpty()) {
+        esptoolPath = QStandardPaths::findExecutable(esptoolPy);
+    }
+    if (esptoolPath.isEmpty()) {
+        const QStringList extraPaths = {
+            dataDir.filePath("pip/bin"),
+            "/opt/homebrew/bin",
+            "/usr/local/bin",
+        };
+        esptoolPath = QStandardPaths::findExecutable(esptoolPy, extraPaths);
+    }
+
+    if (esptoolPath.startsWith(dataDir.filePath("pip"))) {
+        qputenv("PYTHONPATH", dataDir.filePath("pip").toUtf8());
+    }
+
+    QString pipPath;
+    if (esptoolPath.isEmpty()) {
+        pipPath = QStandardPaths::findExecutable("pip3");
+        if (pipPath.isEmpty()) {
+            pipPath = QStandardPaths::findExecutable("pip");
+        }
+        if (pipPath.isEmpty()) {
+            setOutput("Flash Error: could not find esptool.py or pip3 or pip in PATH!");
+            return;
+        }
+    }
+
+    const bool cacheCreated = cacheDir.mkpath("pip");
+    if (!cacheCreated) {
+        setOutput(QString("Flash Error: could not create %1/pip").arg(cacheDir.path()));
+        return;
+    }
+
+    const bool dataCreated = dataDir.mkpath("pip");
+    if (!dataCreated) {
+        setOutput(QString("Flash Error: could not create %1/pip").arg(dataDir.path()));
+        return;
+    }
+
+    if (esptoolPath.isEmpty()) {
+        setOutput("esptool.py not found, installing with pip...\n");
+        process.start(pipPath, {
+                                   "install",
+                                   "--prefer-binary", "--isolated", "--upgrade",
+                                   "--target", dataDir.filePath("pip"),
+                                   "--cache-dir", cacheDir.filePath("pip"),
+                                   "esptool",
+                               });
+        esptoolPath = dataDir.filePath("pip/bin/esptool.py");
+        connect(&process, &QProcess::finished,
+                this, &Flasher::flashSerial);
+        return;
+    }
+}
+
+void Flasher::updateUrl()
+{
+    const QString account = ui->accountEdit->text();
+    const QString mac_address = ui->macAddressEdit->text();
+    if (account.isEmpty() || mac_address.isEmpty()) {
+        ui->updaterUrlEdit->clear();
+        ui->downloadButton->setEnabled(false);
+        return;
+    }
+
+    ui->updaterUrlEdit->setText(
+        QString(RAISE_DEV_CONSOLE_DOMAIN) +
+        "/accounts/" +
+        account +
+        "/updater" +
+        "?mac_address=" +
+        mac_address
+    );
+    ui->downloadButton->setEnabled(true);
+}
+
+void Flasher::readMacAddress()
+{
+    ui->monitorButton->setEnabled(false);
+    ui->flashButton->setEnabled(false);
+
+    if (esptoolPath.isEmpty()) {
+        setEspToolPath();
+    }
+    if (esptoolPath.isEmpty()) {
+        ui->monitorButton->setEnabled(true);
+        ui->flashButton->setEnabled(true);
+        return;
+    }
+
+    const QStringList args = {
+        "--chip", "esp32",
+        "--port", ui->serialPortBox->currentText(),
+        "read_mac",
+    };
+    appendOutputLine(QString("Running %1 %2...\n").arg(esptoolPath, args.join(" ")));
+    process.start(esptoolPath, args);
+    connect(&process, &QProcess::finished,
+            this, &Flasher::readMacAddressFinished);
+}
+
+void Flasher::readMacAddressFinished()
+{
+    if (process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0) {
+        return;
+    }
+
+    const QString output = ui->outputEdit->toPlainText();
+    const static QRegularExpression macRegex("^MAC: (([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2}))$", QRegularExpression::MultilineOption);
+    const QRegularExpressionMatch match = macRegex.match(output);
+
+    if (!match.hasMatch()) {
+        return;
+    }
+    const QString captured = match.captured(1);
+    ui->macAddressEdit->setText(captured);
 }
 
 void Flasher::downloadFirmware()
@@ -94,7 +230,7 @@ void Flasher::downloadFirmware()
     ui->downloadButton->setEnabled(false);
     serialPort.close();
 
-    QUrl firmwareUrl(ui->firmwareUrlEdit->text());
+    QUrl firmwareUrl(ui->updaterUrlEdit->text());
     QNetworkRequest firmwareRequest(firmwareUrl);
     firmwareRequest.setHeader(QNetworkRequest::UserAgentHeader, FLASHER_USER_AGENT);
 
@@ -164,68 +300,20 @@ void Flasher::serialError(QSerialPort::SerialPortError error)
 
 void Flasher::flashSerial()
 {
+    ui->readMacAddressButton->setEnabled(false);
     ui->monitorButton->setEnabled(false);
 
-    QDir dataDir = QDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
-
-    const QString esptoolPy = "esptool.py";
     if (esptoolPath.isEmpty()) {
-      esptoolPath = QStandardPaths::findExecutable(esptoolPy);
+        setEspToolPath();
     }
     if (esptoolPath.isEmpty()) {
-        const QStringList extraPaths = {
-            dataDir.filePath("pip/bin"),
-            "/opt/homebrew/bin",
-            "/usr/local/bin",
-        };
-        esptoolPath = QStandardPaths::findExecutable(esptoolPy, extraPaths);
-    }
-
-    if (esptoolPath.startsWith(dataDir.filePath("pip"))) {
-        qputenv("PYTHONPATH", dataDir.filePath("pip").toUtf8());
-    }
-
-    QString pipPath;
-    if (esptoolPath.isEmpty()) {
-        pipPath = QStandardPaths::findExecutable("pip3");
-        if (pipPath.isEmpty()) {
-            pipPath = QStandardPaths::findExecutable("pip");
-        }
-        if (pipPath.isEmpty()) {
-            setOutput("Flash Error: could not find esptool.py or pip3 or pip in PATH!");
-            return;
-        }
-    }
-
-    const bool cacheCreated = cacheDir.mkpath("pip");
-    if (!cacheCreated) {
-        setOutput(QString("Flash Error: could not create %1/pip").arg(cacheDir.path()));
-        return;
-    }
-
-    const bool dataCreated = dataDir.mkpath("pip");
-    if (!dataCreated) {
-        setOutput(QString("Flash Error: could not create %1/pip").arg(dataDir.path()));
-        return;
-    }
-
-    if (esptoolPath.isEmpty()) {
-        setOutput("esptool.py not found, installing with pip...\n");
-        process.start(pipPath, {
-            "install",
-            "--prefer-binary", "--isolated", "--upgrade",
-            "--target", dataDir.filePath("pip"),
-            "--cache-dir", cacheDir.filePath("pip"),
-            "esptool",
-        });
-        esptoolPath = dataDir.filePath("pip/bin/esptool.py");
-        connect(&process, &QProcess::finished,
-                this, &Flasher::flashSerial);
+        ui->readMacAddressButton->setEnabled(true);
+        ui->monitorButton->setEnabled(true);
         return;
     }
 
     disconnect(&process, &QProcess::finished,
-              this, &Flasher::flashSerial);
+               this, &Flasher::flashSerial);
 
     const QStringList args = {
         "--chip", "esp32",
