@@ -14,14 +14,16 @@ jobs:
           - name: Linux
             runs-on: ubuntu-latest
             run: script/bootstrap
-          # Disable macOS and Windows builds until we need them
-          # to save some GitHub Actions minutes.
-          # - name: macOS
-          #   runs-on: macos-latest
-          #   run: script/bootstrap
-          # - name: Windows
-          #   runs-on: windows-latest
-          #   run: cmake -B build && cmake --build build
+            artifact: build/Flasher
+          - name: macOS
+            runs-on: macos-latest
+            run: script/bootstrap
+            deploy: macdeployqt
+            artifact: build/Flasher.app
+          - name: Windows
+            runs-on: windows-latest
+            run: cmake -B build && cmake --build build --config Release --parallel
+            artifact: build/Release/Flasher.exe
     steps:
       - uses: actions/checkout@v3
       - uses: jurplel/install-qt-action@v3
@@ -30,3 +32,11 @@ jobs:
           cache: true
           modules: qtserialport
       - run: ${{ matrix.run }}
+      # TODO: get this working with linuxdeployqt and windeployqt eventually
+      - if: ${{ matrix.name == 'macOS' }}
+        run: ${{ matrix.deploy }} ${{ matrix.artifact }}
+      - uses: actions/upload-artifact@v2
+        with:
+          name: Flasher-${{ matrix.name }}
+          path: ${{ matrix.artifact }}
+          if-no-files-found: error

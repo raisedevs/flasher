@@ -23,4 +23,4 @@ echo
 
 # Tell CMake to build the project.
 echo "==> cmake --build build"
-cmake --build build
+cmake --build build --config Release --parallel
