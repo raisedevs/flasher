@@ -35,7 +35,7 @@ jobs:
       # TODO: get this working with linuxdeployqt and windeployqt eventually
       - if: ${{ matrix.name == 'macOS' }}
         run: ${{ matrix.deploy }} ${{ matrix.artifact }}
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: Flasher-${{ matrix.name }}
           path: ${{ matrix.artifact }}
