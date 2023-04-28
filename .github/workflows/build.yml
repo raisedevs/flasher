@@ -18,12 +18,10 @@ jobs:
           - name: macOS
             runs-on: macos-latest
             run: script/bootstrap
-            deploy: macdeployqt
             artifact: build/Flasher.app
           - name: Windows
             runs-on: windows-latest
             run: cmake -B build && cmake --build build --config Release --parallel
-            artifact: build/Release/Flasher.exe
     steps:
       - uses: actions/checkout@v3
       - uses: jurplel/install-qt-action@v3
@@ -33,10 +31,17 @@ jobs:
           modules: qtserialport
       - run: ${{ matrix.run }}
       # TODO: get this working with linuxdeployqt and windeployqt eventually
-      - if: ${{ matrix.name == 'macOS' }}
-        run: ${{ matrix.deploy }} ${{ matrix.artifact }}
+      - name: Prepare macOS artifact
+        if: ${{ matrix.name == 'macOS' }}
+        run: |
+          set -e
+
+          macdeployqt build/Flasher.app
+          mkdir -p build/artifact/
+          mv build/Flasher.app build/artifact/
       - uses: actions/upload-artifact@v3
+        if: ${{ matrix.name == 'macOS' }}
         with:
           name: Flasher-${{ matrix.name }}
-          path: ${{ matrix.artifact }}
+          path: build/artifact/
           if-no-files-found: error
