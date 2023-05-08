@@ -50,12 +50,12 @@
      </widget>
     </item>
     <item>
-     <widget class="QLineEdit" name="accountEdit">
+     <widget class="QLineEdit" name="workspaceEdit">
       <property name="readOnly">
        <bool>false</bool>
       </property>
       <property name="placeholderText">
-       <string>Enter your Raise.dev Console Account</string>
+       <string>Enter your Raise.dev Console Workspace</string>
       </property>
      </widget>
     </item>
@@ -65,7 +65,7 @@
        <bool>false</bool>
       </property>
       <property name="placeholderText">
-       <string>Raise.dev Console Updater URL from Account, MAC Address</string>
+       <string>Raise.dev Console Updater URL from Workspace, MAC Address</string>
       </property>
      </widget>
     </item>
