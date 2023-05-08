@@ -28,7 +28,7 @@ Flasher::Flasher(QWidget *parent)
     connect(ui->readMacAddressButton, &QPushButton::clicked,
             this, &Flasher::readMacAddress);
 
-    connect(ui->accountEdit, &QLineEdit::textEdited,
+    connect(ui->workspaceEdit, &QLineEdit::textEdited,
             this, &Flasher::updateUrl);
 
     connect(ui->downloadButton, &QPushButton::clicked,
@@ -162,9 +162,9 @@ void Flasher::setEspToolPath() {
 
 void Flasher::updateUrl()
 {
-    const QString account = ui->accountEdit->text();
+    const QString workspace = ui->workspaceEdit->text();
     const QString mac_address = ui->macAddressEdit->text();
-    if (account.isEmpty() || mac_address.isEmpty()) {
+    if (workspace.isEmpty() || mac_address.isEmpty()) {
         ui->updaterUrlEdit->clear();
         ui->downloadButton->setEnabled(false);
         return;
@@ -172,8 +172,8 @@ void Flasher::updateUrl()
 
     ui->updaterUrlEdit->setText(
         QString(RAISE_DEV_CONSOLE_DOMAIN) +
-        "/accounts/" +
-        account +
+        "/workspaces/" +
+        workspace +
         "/updater" +
         "?mac_address=" +
         mac_address
@@ -343,4 +343,3 @@ Flasher::~Flasher()
 {
     delete ui;
 }
-
