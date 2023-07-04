@@ -1,8 +1,6 @@
-# Raise.dev Firmware Flasher
+# Raise.dev Firmware Flasher (archived ☠️)
 
-Raise's ESP32 and ESP8266 firmware flasher cross-platform Qt desktop application for flashing ESP8266s and ESP32s from the Raise.dev Console.
-
-**Note: unless a Raise.dev cofounder has invited you to join the Raise.dev Console, you can only use this for serial port monitoring (for now).**
+This was Raise's ESP32 and ESP8266 firmware flasher cross-platform Qt desktop application for flashing ESP8266s and ESP32s from the Raise.dev Console.
 
 ## Building and Developing (on macOS)
 
@@ -33,11 +31,7 @@ Note that you'll need to manually install Qt and CMake.
 
 ## Status
 
-Alpha and in active development.
-
-## Contact
-
-[Mike McQuaid](mailto:mike@raise.dev)
+Archived.
 
 ## License
 
